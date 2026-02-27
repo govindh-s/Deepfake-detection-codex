@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Deepfake Image Detector</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #f4f6f8;
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+      }
+      .card {
+        width: min(560px, 92vw);
+        background: white;
+        border-radius: 12px;
+        padding: 24px;
+        box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+      }
+      h1 {
+        margin-top: 0;
+        font-size: 1.4rem;
+      }
+      .hint {
+        color: #5f6770;
+        margin-bottom: 1rem;
+      }
+      .result {
+        margin-top: 1rem;
+        padding: 12px;
+        border-radius: 8px;
+        background: #eef3ff;
+        display: none;
+      }
+      button {
+        margin-top: 12px;
+        background: #1f6feb;
+        color: #fff;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .error {
+        color: #b42318;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Deepfake Image Detection (MesoNet-Style)</h1>
+      <p class="hint">Upload a single image to classify it as REAL or FAKE.</p>
+
+      <form id="uploadForm">
+        <input type="file" id="imageInput" name="image" accept="image/*" required />
+        <br />
+        <button id="submitBtn" type="submit">Analyze Image</button>
+      </form>
+
+      <div id="result" class="result"></div>
+    </main>
+
+    <script>
+      const form = document.getElementById("uploadForm");
+      const resultDiv = document.getElementById("result");
+      const submitBtn = document.getElementById("submitBtn");
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const fileInput = document.getElementById("imageInput");
+        const file = fileInput.files[0];
+
+        if (!file) {
+          resultDiv.style.display = "block";
+          resultDiv.classList.add("error");
+          resultDiv.textContent = "Please select an image.";
+          return;
+        }
+
+        submitBtn.disabled = true;
+        resultDiv.style.display = "block";
+        resultDiv.classList.remove("error");
+        resultDiv.textContent = "Processing...";
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        try {
+          const response = await fetch("/predict", {
+            method: "POST",
+            body: formData,
+          });
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.error || "Prediction failed");
+          }
+
+          resultDiv.innerHTML = `<strong>Result:</strong> ${data.label}<br/><strong>Confidence:</strong> ${(
+            Number(data.confidence) * 100
+          ).toFixed(2)}%`;
+        } catch (error) {
+          resultDiv.classList.add("error");
+          resultDiv.textContent = error.message;
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
